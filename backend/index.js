@@ -19,19 +19,11 @@ require("dotenv").config(); // ✅ load .env before using GOOGLE_API_KEY or JWT_
 const agentRoutes = require("./routes/agent");
 const generatorRoutes = require("./routes/generator");
 const knowledgeTestsRoutes = require("./routes/knowledgeTests");
-
 const roomsRoutes = require("./routes/rooms");
-
-
-
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const API_PREFIX = "/api";
-
-// Mount routes
-app.use(API_PREFIX + "/agent", agentRoutes);
-app.use(API_PREFIX + "/knowledge-tests", knowledgeTestsRoutes);
 const DATA_DIR = path.join(__dirname, "data");
 const JWT_SECRET = process.env.LEARNBOOST_JWT_SECRET || "learnboost_dev_secret";
 const JWT_EXPIRES_IN = "7d"; // token lifespan
@@ -40,11 +32,9 @@ const JWT_EXPIRES_IN = "7d"; // token lifespan
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-
-// near other requires
-const knowledgeTestsRoutes = require("./routes/knowledgeTests");
-// after body parser / before auth middleware or after existing mounts — any order similar to other routes:
-app.use("/api/knowledge-tests", knowledgeTestsRoutes);
+// Mount routes
+app.use(API_PREFIX + "/agent", agentRoutes);
+app.use(API_PREFIX + "/knowledge-tests", knowledgeTestsRoutes);
 
 
 
