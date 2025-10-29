@@ -45,8 +45,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 
-// Handle preflight requests
-app.options(API_PREFIX + '/*', cors(corsOptions));
+// Preflight requests are handled by the CORS middleware above.
 
 // Mount routes with API_PREFIX
 app.use(API_PREFIX + "/agent", agentRoutes);
