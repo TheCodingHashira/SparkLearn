@@ -28,31 +28,35 @@ const DATA_DIR = path.join(__dirname, "data");
 const JWT_SECRET = process.env.LEARNBOOST_JWT_SECRET || "learnboost_dev_secret";
 const JWT_EXPIRES_IN = "7d"; // token lifespan
 
-// ✅ Enable CORS and JSON parsing BEFORE any routes
-app.use(cors());
+// Configure CORS
+const corsOptions = {
+  origin: [
+    'https://sparklearn-pulz.onrender.com',
+    'https://learn-boost.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+// ✅ Enable CORS with options and JSON parsing BEFORE any routes
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 
-// Mount routes
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Mount routes with API_PREFIX
 app.use(API_PREFIX + "/agent", agentRoutes);
+app.use(API_PREFIX + "/generator", generatorRoutes);
 app.use(API_PREFIX + "/knowledge-tests", knowledgeTestsRoutes);
-
-
-
-
-
-
-
-
-
-// ✅ Mount routes after body parser
-app.use("/api/agent", agentRoutes);
-app.use("/api/generator", generatorRoutes);
-app.use("/api/group-learning", roomsRoutes);
+app.use(API_PREFIX + "/group-learning", roomsRoutes);
 
 const ocrRoutes = require("./routes/ocr");
 // ...
-app.use("/api/ocr", ocrRoutes);
-
+app.use(API_PREFIX + "/ocr", ocrRoutes);
 
 
 // --------------------- Helpers ---------------------
