@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/Layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { knowledgeTestsApi, ocrApi } from "@/lib/api";
 
 type Question = { id: string; prompt: string; choices: string[]; correctIndex?: number };
 type TestMeta = { id: string; name: string; createdAt: string; questionCount: number; };
@@ -40,9 +41,7 @@ export default function KnowledgeGaps() {
 
   async function loadTests() {
     try {
-      const r = await fetch("/api/knowledge-tests");
-      if (!r.ok) throw new Error("Failed to load tests");
-      const data = await r.json();
+      const data = await knowledgeTestsApi.list();
       setTests(data || []);
     } catch (err) {
       console.error(err);
@@ -58,16 +57,7 @@ export default function KnowledgeGaps() {
     }
     setCreating(true);
     try {
-      const resp = await fetch("/api/knowledge-tests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: testName, text: testText, requested: 6 }),
-      });
-      if (!resp.ok) {
-        const e = await resp.json().catch(() => ({}));
-        throw new Error(e.error || "Failed");
-      }
-      const created = await resp.json();
+      const created = await knowledgeTestsApi.create({ name: testName, text: testText, requested: 6 });
       toast.success("Test created");
       setCreateOpen(false);
       setTestName("");
@@ -84,9 +74,7 @@ export default function KnowledgeGaps() {
 
   async function openRunner(testId: string) {
     try {
-      const r = await fetch(`/api/knowledge-tests/${encodeURIComponent(testId)}`);
-      if (!r.ok) throw new Error("Failed to fetch test");
-      const t = await r.json();
+      const t = await knowledgeTestsApi.getById(testId);
       setCurrentTest(t);
       setAnswers({});
       setLastResult(t.results && t.results.length ? t.results[t.results.length - 1] : null);
@@ -100,9 +88,7 @@ export default function KnowledgeGaps() {
 
   async function openGap(testId: string) {
     try {
-      const r = await fetch(`/api/knowledge-tests/${encodeURIComponent(testId)}`);
-      if (!r.ok) throw new Error("Failed to fetch test");
-      const t = await r.json();
+      const t = await knowledgeTestsApi.getById(testId);
       setCurrentTest(t);
       setLastResult(t.results && t.results.length ? t.results[t.results.length - 1] : null);
       setJustifications([]);
@@ -126,16 +112,7 @@ export default function KnowledgeGaps() {
         userId: null,
         answers: (currentTest.questions || []).map((q: any) => ({ qId: q.id, selectedIndex: answers[q.id] ?? -1 })),
       };
-      const r = await fetch(`/api/knowledge-tests/${encodeURIComponent(currentTest.id)}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!r.ok) {
-        const e = await r.json().catch(() => ({}));
-        throw new Error(e.error || "Submit failed");
-      }
-      const data = await r.json();
+      const data = await knowledgeTestsApi.submit(currentTest.id, payload);
       setLastResult(data.submission);
       toast.success(`Submitted — score ${data.score}%`);
       await loadTests();
@@ -162,13 +139,7 @@ export default function KnowledgeGaps() {
     if (!wrongQIds.length) return toast.success("No mistakes!");
     setJustifying(true);
     try {
-      const r = await fetch(`/api/knowledge-tests/${encodeURIComponent(currentTest.id)}/justify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qIds: wrongQIds, contextNotes: currentTest.sourceText || "" }),
-      });
-      if (!r.ok) throw new Error("Justify failed");
-      const data = await r.json();
+      const data = await knowledgeTestsApi.justify(currentTest.id, { qIds: wrongQIds, contextNotes: currentTest.sourceText || "" });
       setJustifications(data.justifications || []);
       toast.success("Explanations ready");
     } catch (err) {
@@ -187,16 +158,7 @@ export default function KnowledgeGaps() {
       const base64 = String(reader.result || "");
       setOcrLoading(true);
       try {
-        const r = await fetch(`/api/knowledge-tests/ocr`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64 }),
-        });
-        if (!r.ok) {
-          const e = await r.json().catch(() => ({}));
-          throw new Error(e.error || "OCR failed");
-        }
-        const data = await r.json();
+        const data = await ocrApi.extract({ imageBase64: base64 });
         const extracted = data.text || "";
         if (!extracted) throw new Error("No text extracted");
         setTestText((s) => (s ? s + "\n\n" + extracted : extracted));
@@ -251,7 +213,10 @@ export default function KnowledgeGaps() {
       {/* Create modal */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-3xl w-full">
-          <DialogHeader><DialogTitle>Create new test</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Create new test</DialogTitle>
+            <DialogDescription>Paste text or use OCR to auto-generate a multiple-choice test.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
               <Label>Test name</Label>
@@ -288,7 +253,10 @@ export default function KnowledgeGaps() {
       {/* Runner modal */}
       <Dialog open={runnerOpen} onOpenChange={(v) => { if (!v) setCurrentTest(null); }}>
         <DialogContent className="max-w-4xl w-full">
-          <DialogHeader><DialogTitle>{currentTest?.name || "Test"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{currentTest?.name || "Test"}</DialogTitle>
+            <DialogDescription>Answer the questions and submit to get your score.</DialogDescription>
+          </DialogHeader>
 
           <div className="flex flex-col max-h-[70vh]">
             <div className="overflow-auto p-2 space-y-4">
@@ -346,7 +314,10 @@ export default function KnowledgeGaps() {
       {/* Knowledge Gap overlay */}
       <Dialog open={gapOpen} onOpenChange={(v) => { if (!v) { setGapOpen(false); setCurrentTest(null); } }}>
         <DialogContent className="max-w-4xl w-full">
-          <DialogHeader><DialogTitle>Knowledge Gap — {currentTest?.name}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Knowledge Gap — {currentTest?.name}</DialogTitle>
+            <DialogDescription>Review your mistakes and get explanations to fill the gaps.</DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-4 max-h-[70vh] overflow-auto p-2">
             <div>

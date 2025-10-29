@@ -262,3 +262,36 @@ export const generatorApi = {
       body: JSON.stringify(data),
     }),
 };
+
+// Knowledge Tests
+export const knowledgeTestsApi = {
+  list: () => fetchApi<any[]>("/knowledge-tests"),
+  create: (data: { name: string; text: string; requested?: number }) =>
+    fetchApi<any>("/knowledge-tests", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getById: (testId: string) => fetchApi<any>(`/knowledge-tests/${encodeURIComponent(testId)}`),
+  submit: (
+    testId: string,
+    payload: { userId: string | null; answers: Array<{ qId: string; selectedIndex: number }> }
+  ) =>
+    fetchApi<any>(`/knowledge-tests/${encodeURIComponent(testId)}/submit`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  justify: (testId: string, payload: { qIds: string[]; contextNotes?: string }) =>
+    fetchApi<any>(`/knowledge-tests/${encodeURIComponent(testId)}/justify`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
+
+// OCR
+export const ocrApi = {
+  extract: (payload: { imageBase64: string }) =>
+    fetchApi<{ text: string }>("/ocr", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
