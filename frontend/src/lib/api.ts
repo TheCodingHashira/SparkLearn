@@ -223,3 +223,42 @@ export const notificationsApi = {
       }>;
     }>("/notifications"),
 };
+
+// Study Agent (matches backend /api/agent/ask)
+export const agentApi = {
+  ask: (question: string) =>
+    fetchApi<{ answer: string; note?: string }>("/agent/ask", {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }),
+};
+
+// Group Learning Rooms (matches backend /api/group-learning/...)
+export const groupLearningRoomsApi = {
+  getRooms: () => fetchApi<any[]>("/group-learning/rooms"),
+  createRoom: (data: { title: string; topic: string }) =>
+    fetchApi<any>("/group-learning/rooms", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getRoom: (roomId: string) => fetchApi<any>(`/group-learning/${encodeURIComponent(roomId)}`),
+  joinRoom: (roomId: string, payload: { guestId?: string; username?: string }) =>
+    fetchApi<any>(`/group-learning/${encodeURIComponent(roomId)}/join`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  addCard: (roomId: string, payload: { question: string; answer: string }) =>
+    fetchApi<any>(`/group-learning/${encodeURIComponent(roomId)}/flashcards/add`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
+
+// Flashcard Generator
+export const generatorApi = {
+  generate: (data: { text: string }) =>
+    fetchApi<{ success?: boolean; added?: number; cards?: any[]; note?: string }>("/generator/generate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};

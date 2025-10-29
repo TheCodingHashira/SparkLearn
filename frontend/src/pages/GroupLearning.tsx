@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { groupLearningRoomsApi } from "@/lib/api";
 
 /**
  * GroupLearning page
@@ -81,9 +82,7 @@ export default function GroupLearning() {
   // ----- backend calls -----
   async function loadRooms() {
     try {
-      const resp = await fetch("/api/group-learning/rooms");
-      if (!resp.ok) throw new Error("Failed to load rooms");
-      const data = await resp.json();
+      const data = await groupLearningRoomsApi.getRooms();
       setRooms(data || []);
 
       // compute joinedMap from participants (guestId)
@@ -107,16 +106,7 @@ export default function GroupLearning() {
     }
     setCreatingRoom(true);
     try {
-      const resp = await fetch("/api/group-learning/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newRoom.title, topic: newRoom.subject }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to create room");
-      }
-      const created = await resp.json();
+      const created = await groupLearningRoomsApi.createRoom({ title: newRoom.title, topic: newRoom.subject });
       toast.success("Room created");
       setNewRoom({ title: "", subject: "" });
       await loadRooms();
@@ -130,16 +120,7 @@ export default function GroupLearning() {
 
   async function joinRoom(roomId: string) {
     try {
-      const resp = await fetch(`/api/group-learning/${encodeURIComponent(roomId)}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId, username: `guest_${guestId?.slice(-6)}` }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to join room");
-      }
-      const payload = await resp.json();
+      const payload = await groupLearningRoomsApi.joinRoom(roomId, { guestId: guestId || undefined, username: `guest_${guestId?.slice(-6)}` });
       setJoinedMap((m) => ({ ...m, [roomId]: true }));
       toast.success("Joined room");
       // auto open modal into deck
@@ -155,12 +136,7 @@ export default function GroupLearning() {
     try {
       // ensure modal opens in deck view
       setShowAddForm(false);
-      const resp = await fetch(`/api/group-learning/${encodeURIComponent(roomId)}`);
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to fetch room");
-      }
-      const room = await resp.json();
+      const room = await groupLearningRoomsApi.getRoom(roomId);
       setDeck(room.cards || []);
       setCurrentIndex(0);
       setIsFlipped(false);
@@ -182,16 +158,7 @@ export default function GroupLearning() {
     if (!q || !a) return toast.error("Please fill question & answer");
     setAddingCard(true);
     try {
-      const resp = await fetch(`/api/group-learning/${encodeURIComponent(currentRoomId)}/flashcards/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, answer: a }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to add card");
-      }
-      const payload = await resp.json();
+      const payload = await groupLearningRoomsApi.addCard(currentRoomId, { question: q, answer: a });
       // robust update: prefer returned card, else re-fetch room
       if (payload.card) {
         setDeck((d) => [...d, payload.card]);

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { agentApi } from "@/lib/api";
+import { generatorApi } from "@/lib/api";
 
 type ChatItem = { role: "user" | "agent"; text: string; id: string };
 
@@ -49,20 +51,7 @@ export default function StudyAgent() {
     setLoading(true);
 
     try {
-      const resp = await fetch("/api/agent/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ question: q }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: resp.statusText }));
-        throw new Error(err.error || err.message || "Request failed");
-      }
-
-      const data = await resp.json();
+      const data = await agentApi.ask(q);
       const agentText = data.answer || "Sorry, no answer returned.";
       const agentMessage: ChatItem = {
         id: String(Date.now()) + "-a",
@@ -97,14 +86,7 @@ export default function StudyAgent() {
     setGeneratedCards([]);
 
     try {
-      const resp = await fetch("/api/generator/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input }),
-      });
-
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Failed to generate");
+      const data = await generatorApi.generate({ text: input });
 
       toast.success(`Generated ${data.added} flashcards!`);
       setGeneratedCards(data.cards || []);
