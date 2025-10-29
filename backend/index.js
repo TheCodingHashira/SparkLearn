@@ -32,7 +32,7 @@ const JWT_EXPIRES_IN = "7d"; // token lifespan
 const corsOptions = {
   origin: [
     'https://sparklearn-pulz.onrender.com',
-    'https://learn-boost.vercel.app',
+    'https://spark-learn-ruby.vercel.app',
     'http://localhost:3000',
     'http://localhost:3001'
   ],
@@ -46,7 +46,7 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 
 // Handle preflight requests
-app.options('*', cors(corsOptions));
+app.options(API_PREFIX + '/*', cors(corsOptions));
 
 // Mount routes with API_PREFIX
 app.use(API_PREFIX + "/agent", agentRoutes);

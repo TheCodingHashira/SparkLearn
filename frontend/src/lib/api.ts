@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://learnboostback.onrender.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://sparklearn-pulz.onrender.com/api";
 const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY || "auth_token";
 
 let authToken: string | null = localStorage.getItem(TOKEN_KEY);
